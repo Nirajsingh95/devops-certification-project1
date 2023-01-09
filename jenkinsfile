@@ -1,0 +1,37 @@
+pipeline {
+    agent any
+    environment {
+     PATH = "/opt/maven/bin:$PATH" 
+     }
+    stages {
+        stage('Checkout') {
+            steps {
+               checkout scmGit(branches: [[name: '*/master']], extensions: [], userRemoteConfigs: [[url: 'https://github.com/Nirajsingh95/devops-certification-project1.git']])
+            }
+        }
+        stage('maven build'){
+            steps{
+                sh "mvn clean package"
+            }
+        }
+        stage('Terraform inint') {
+            steps{
+                sh ("terraform init");
+            }
+        }
+        stage('Terraform action') {
+            steps{
+                echo "terrraform action from parameter is - ${action}" 
+                sh ("terraform ${action} --auto-approve");
+            }
+        }
+        stage('Package Installation in TEST Server') {
+            steps{
+                sh "sleep 120"
+                sh " ansible all -i aws_ec2.yaml -m ping --private-key=/etc/ansible/test.pem -u ec2-user "
+                sh " ansible-playbook -i aws_ec2.yaml -u ec2-user packageInstall.yaml "
+                sh " ansible-playbook -i aws_ec2.yaml -u ec2-user createcontainer.yaml "
+            }
+        }
+    }
+}
